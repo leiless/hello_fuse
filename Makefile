@@ -4,7 +4,6 @@
 
 CC ?= gcc
 
-CPPFLAGS += -D__TARGET_OS__=\"$(shell uname -m)-apple-darwin_$(shell uname -r)\"
 CPPFLAGS += -D__TS__=\"$(shell date +'%Y/%m/%d\ %H:%M:%S%z')\"
 
 CPPFLAGS += -DFUSE_USE_VERSION=26
