@@ -56,7 +56,7 @@ static int hello_getattr(const char *path, struct stat *stbuf)
 
         /* Root directory of hello-fs */
         stbuf->st_mode = S_IFDIR | 0755;    /* rwxr-xr-x */
-        stbuf->st_nlink = 3;
+        stbuf->st_nlink = 2;
     } else if (strcmp(path, file_path) == 0) {
         (void) memset(stbuf, 0, sizeof(*stbuf));
 
