@@ -16,29 +16,24 @@
  */
 #define STRLEN(s)           (sizeof(s) - 1)
 
-#define PCOMM               "hello-fs"
-#define LOG(fmt, ...)       (void) printf("[" PCOMM "]: " fmt, ##__VA_ARGS__)
-#define LOG_ERR(fmt, ...)   (void) fprintf(stderr, "[" PCOMM "]: (ERR) " fmt, ##__VA_ARGS__)
+#define FSNAME              "hello-fs"
+#define LOG(fmt, ...)       (void) printf("[" FSNAME "]: " fmt, ##__VA_ARGS__)
+#define LOG_ERR(fmt, ...)   (void) fprintf(stderr, "[" FSNAME "]: (ERR) " fmt, ##__VA_ARGS__)
 #define LOG_DBG(fmt, ...)   LOG("(DBG) " fmt, ##__VA_ARGS__)
 #define LOG_WARN(fmt, ...)  LOG("(WARN) " fmt, ##__VA_ARGS__)
 
 #define UNUSED(arg, ...)    (void) ((void) (arg), ##__VA_ARGS__)
 
 #define assert_nonnull(p)   assert((p) != NULL)
-#ifdef DEBUG
-#define dassert_nonnull(p)  assert_nonnull(p)
-#else
-#define dassert_nonnull(p)  ((void) (p))
-#endif
 
 static const char *file_path = "/hello.txt";
 static const char file_content[] = "Hello world!\n";
 static const size_t file_size = STRLEN(file_content);
 
-int hello_getattr(const char *path, struct stat *stbuf)
+static int hello_getattr(const char *path, struct stat *stbuf)
 {
-    dassert_nonnull(path);
-    dassert_nonnull(stbuf);
+    assert_nonnull(path);
+    assert_nonnull(stbuf);
 
     LOG_DBG("getattr()  path: %s", path);
 
@@ -65,8 +60,8 @@ int hello_getattr(const char *path, struct stat *stbuf)
 
 static int hello_open(const char *path, struct fuse_file_info *fi)
 {
-    dassert_nonnull(path);
-    dassert_nonnull(fi);
+    assert_nonnull(path);
+    assert_nonnull(fi);
 
     LOG_DBG("open()  path: %s fi->flags: %#x", path, fi->flags);
 
@@ -75,25 +70,25 @@ static int hello_open(const char *path, struct fuse_file_info *fi)
     }
 
     if ((fi->flags & O_ACCMODE) != O_RDONLY) {
-        return -EACCES;     /* Only reading allowed */
+        return -EACCES;     /* Only O_RDONLY access mode is allowed */
     }
 
     return 0;
 }
 
-int hello_read(
+static int hello_read(
         const char *path,
         char *buf,
         size_t sz,
         off_t off,
         struct fuse_file_info *fi)
 {
-    dassert_nonnull(path);
-    dassert_nonnull(buf);
-    dassert_nonnull(fi);
+    assert_nonnull(path);
+    assert_nonnull(buf);
     assert(off >= 0);
+    assert_nonnull(fi);
 
-    LOG_DBG("read()  path: %s size: %zu off: %lld", path, sz, off);
+    LOG_DBG("read()  path: %s size: %zu off: %lld fi->flags: %#x", path, sz, off, fi->flags);
 
     if (strcmp(path, file_path) != 0) {
         return -ENOENT;
@@ -101,7 +96,7 @@ int hello_read(
 
     /* Trying to read past EOF of file_path */
     if ((size_t) off >= file_size) {
-        /* TODO: print a log */
+        LOG_WARN("Read past EOF?!  off: %lld size: %zu", off, sz);
         return 0;
     }
 
@@ -113,24 +108,27 @@ int hello_read(
     return sz;
 }
 
-int hello_readdir(
+static int hello_readdir(
         const char *path,
         void *buf,
         fuse_fill_dir_t filler,
         off_t off,
         struct fuse_file_info *fi)
 {
-    UNUSED(fi);
+    assert_nonnull(path);
+    assert_nonnull(buf);
+    assert_nonnull(filler);
+    assert(off >= 0);
+    assert_nonnull(fi);
 
-    LOG_DBG("readdir  path: %s off: %lld", path, off);
+    LOG_DBG("readdir()  path: %s off: %lld fi->flags: %#x", path, off, fi->flags);
 
     /* hello-fs have only one directory(e.g. the root directory) */
     if (strcmp(path, "/") != 0) return -ENOENT;
 
-    /* TODO: check filler() return value */
-    filler(buf, ".", NULL, 0);
-    filler(buf, "..", NULL, 0);
-    filler(buf, file_path + 1, NULL, 0);
+    (void) filler(buf, ".", NULL, 0);           /* Current directory */
+    (void) filler(buf, "..", NULL, 0);          /* Parent directory */
+    (void) filler(buf, file_path + 1, NULL, 0); /* The only one regular file */
 
     return 0;
 }
