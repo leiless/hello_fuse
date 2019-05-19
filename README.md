@@ -14,7 +14,7 @@ Simple [`make(1)`](x-man-page://1/make) let you build `DEBUG` version of `hello_
 
 ```shell
 mkdir mount_point
-./hello-debug mount_point
+./hello_fs-debug mount_point
 ```
 
 For a full list of mount options, please specify `--help` for `hello-debug`
@@ -24,15 +24,15 @@ For a full list of mount options, please specify `--help` for `hello-debug`
 `hello_fuse` uses [`syslog(3)`](x-man-page://3/syslog) for logging, to see its output:
 
 ```shell
-syslog -F '$((Time)(JZ)) $Host <$((Level)(str))> $(Sender)[$(PID)]: $Message' -w 0 -k Sender hello-debug
+syslog -F '$((Time)(JZ)) $Host <$((Level)(str))> $(Sender)[$(PID)]: $Message' -w 0 -k Sender hello_fs-debug
 ```
 
-If you built `release` version, use replace `hello-debug` with `hello`
+If you uses `release` version, replace `hello_fs-debug` with `hello_fs`
 
 ### Unmount `hello_fuse`
 
 ```shell
-umount t
+umount mount_point
 ```
 
 ### TODO

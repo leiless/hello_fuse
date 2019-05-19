@@ -35,9 +35,9 @@
  * macOS 10.13+ LOG_INFO, LOG_DEBUG levels rejected(log nothing)
  */
 #define LOG(fmt, ...)       syslog(LOG_NOTICE, fmt "\n", ##__VA_ARGS__)
-#define LOG_ERROR(fmt, ...) syslog(LOG_ERR, fmt "\n", ##__VA_ARGS__)
-#define LOG_DBG(fmt, ...)   syslog(LOG_NOTICE, fmt "\n", ##__VA_ARGS__)
-#define LOG_WARN(fmt, ...)  syslog(LOG_WARNING, fmt "\n", ##__VA_ARGS__)
+#define LOG_ERROR(fmt, ...) syslog(LOG_ERR, "[ERR] " fmt "\n", ##__VA_ARGS__)
+#define LOG_DBG(fmt, ...)   syslog(LOG_NOTICE, "[DBG] " fmt "\n", ##__VA_ARGS__)
+#define LOG_WARN(fmt, ...)  syslog(LOG_WARNING, "[WARN] " fmt "\n", ##__VA_ARGS__)
 #endif
 
 #define UNUSED(arg, ...)    (void) ((void) (arg), ##__VA_ARGS__)
