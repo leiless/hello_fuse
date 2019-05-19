@@ -16,30 +16,33 @@ CFLAGS += -arch x86_64
 CFLAGS += -mmacosx-version-min=10.4
 
 # Root for FUSE for macOS includes and libraries
-FUSE_ROOT = /usr/local
-#FUSE_ROOT = /opt/local
-INCLUDE_DIR = $(FUSE_ROOT)/include/osxfuse/fuse
-LIBRARY_DIR = $(FUSE_ROOT)/lib
+FUSE_ROOT ?= /usr/local
+#FUSE_ROOT ?= /opt/local
+INCLUDE_DIR ?= $(FUSE_ROOT)/include/osxfuse/fuse
+LIBRARY_DIR ?= $(FUSE_ROOT)/lib
 
 CFLAGS += -I$(INCLUDE_DIR) -L$(LIBRARY_DIR)
 
 LIBS += -losxfuse
 
-EXEC := hello-debug hello
+EXEC := hello_fs hello_fs-debug
 
-all: hello-debug
+all: debug
 
-hello: CFLAGS += -Os
-hello: hello.c
+release: hello_fs
+debug: hello_fs-debug
+
+hello_fs: CFLAGS += -Os
+hello_fs: hello_fs.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBS) $< -o $@
 
-hello-debug: CPPFLAGS += -g -DDEBUG
-hello-debug: CFLAGS += -O0
-hello-debug: hello.c
+hello_fs-debug: CPPFLAGS += -g -DDEBUG
+hello_fs-debug: CFLAGS += -O0
+hello_fs-debug: hello_fs.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBS) $< -o $@
 
 clean:
 	rm -rf *.o *.dSYM $(EXEC)
 
-.PHONY: all clean hello-debug hello
+.PHONY: all clean hello_fs hello_fs-debug
 

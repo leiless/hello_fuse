@@ -2,6 +2,10 @@
  * Created 190514 lynnl
  *
  * Hello FUSE filesystem implementation
+ *
+ * see:
+ *  osxfuse/filesystems/filesystems-c/hello/hello.c
+ *  libfuse/example/hello.c
  */
 
 #include <stdio.h>
@@ -18,7 +22,7 @@
  */
 #define STRLEN(s)           (sizeof(s) - 1)
 
-#define FSNAME              "hello-fs"
+#define FSNAME              "hello_fs"
 
 #ifdef USE_TTY_LOGGING
 #define LOG(fmt, ...)       (void) printf("[" FSNAME "]: " fmt "\n", ##__VA_ARGS__)
