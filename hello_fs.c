@@ -8,6 +8,9 @@
  *  libfuse/example/hello.c
  */
 
+#define FUSE_USE_VERSION    26
+#define _FILE_OFFSET_BITS   64
+
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -161,8 +164,6 @@ static struct fuse_operations hello_fs_op = {
 
 int main(int argc, char *argv[])
 {
-    (void) printf(FSNAME ": build time %s\n", __TS__);
-
     /* Setup syslog(3) */
     (void) setlogmask(LOG_UPTO(LOG_NOTICE));
 
