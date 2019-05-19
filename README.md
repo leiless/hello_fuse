@@ -29,6 +29,8 @@ syslog -F '$((Time)(JZ)) $Host <$((Level)(str))> $(Sender)[$(PID)]: $Message' -w
 
 If you uses `release` version, replace `hello_fs-debug` with `hello_fs`
 
+You may alternatively use `Console.app` to filter out logs issued by `hello_fs[-debug]`, since [syslog(1)](x-man-page://1/syslog) is buggy in macOS.
+
 ### Unmount `hello_fuse`
 
 ```shell
