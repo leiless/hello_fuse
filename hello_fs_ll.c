@@ -1,5 +1,5 @@
 /*
- * Created 190514 lynnl
+ * Created 190519 lynnl
  *
  * Hello FUSE filesystem implementation using low-level FUSE API
  *
@@ -86,8 +86,8 @@ static void hello_ll_lookup(
         fuse_ino_t parent,
         const char *name)
 {
-    struct fuse_entry_param param;
     int e;
+    struct fuse_entry_param param;
 
     assert_nonnull(req);
     assert_nonnull(name);
@@ -114,8 +114,11 @@ static void hello_ll_getattr(
         fuse_ino_t ino,
         struct fuse_file_info *fi)
 {
-    struct stat stbuf;
     int e;
+    struct stat stbuf;
+
+    assert_nonnull(req);
+    assert_nonnull(fi);
 
     _LOG_DBG("getattr()  ino: %#lx fi->flags: %#x", ino, fi->flags);
 
@@ -193,11 +196,15 @@ static void hello_ll_readdir(
     struct dirbuf b;
     int e;
 
-    LOG_DBG("readdir()  ino: %#lx size: %zu off: %lld fi->flags: %#x",
+    assert_nonnull(req);
+    assert_nonnull(fi);
+    assert(off >= 0);
+
+    _LOG_DBG("readdir()  ino: %#lx size: %zu off: %lld fi->flags: %#x",
                         ino, size, off, fi->flags);
 
     if (ino != 1) {     /* If not root directory */
-        fuse_reply_err(req, ENOENT);
+        fuse_reply_err(req, ENOTDIR);
         return;
     }
 
@@ -223,6 +230,9 @@ static void hello_ll_open(
 {
     int e;
 
+    assert_nonnull(req);
+    assert_nonnull(fi);
+
     _LOG_DBG("open()  ino: %#lx fi->flags: %#x", ino, fi->flags);
 
     if (ino != 2) {
@@ -244,6 +254,11 @@ static void hello_ll_read(
         struct fuse_file_info *fi)
 {
     int e;
+
+    assert_nonnull(req);
+    assert_nonnull(fi);
+    assert(off >= 0);
+
     _LOG_DBG("read()  ino: %#lx size: %zu off: %lld fi->flags: %#x",
                         ino, size, off, fi->flags);
 
