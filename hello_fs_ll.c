@@ -57,8 +57,207 @@ static const char *file_path = "/hello.txt";
 static const char file_content[] = "Hello world!\n";
 static const size_t file_size = STRLEN(file_content);
 
-static const struct fuse_lowlevel_ops hello_ll_ops = {
+static int hello_stat(fuse_ino_t ino, struct stat *stbuf)
+{
+    assert_nonnull(stbuf);
 
+    stbuf->st_ino = ino;
+    switch (ino) {
+    case 1:
+        stbuf->st_mode = S_IFDIR | 0755;    /* rwxr-xr-x */
+        stbuf->st_nlink = 2;
+        break;
+
+    case 2:
+        stbuf->st_mode = S_IFREG | 0444;    /* r--r--r-- */
+        stbuf->st_nlink = 1;
+        stbuf->st_size = file_size;
+        break;
+
+    default:
+        return -1;
+    }
+
+    return 0;
+}
+
+static void hello_ll_lookup(
+        fuse_req_t req,
+        fuse_ino_t parent,
+        const char *name)
+{
+    struct fuse_entry_param param;
+    int e;
+
+    assert_nonnull(req);
+    assert_nonnull(name);
+
+    _LOG_DBG("lookup()  parent: %#lx name: %s", parent, name);
+
+    if (parent != 1 || strcmp(name, file_path) != 0) {
+        fuse_reply_err(req, ENOENT);
+        return;
+    }
+
+    (void) memset(&e, 0, sizeof(e));
+    param.ino = 2;              /* see: hello_stat() */
+    param.attr_timeout = 1.0;
+    param.entry_timeout = 1.0;
+    (void) hello_stat(param.ino, &param.attr);
+
+    e = fuse_reply_entry(req, &param);
+    if (e != 0) _LOG_ERR("fuse_reply_entry() fail  errno: %d", -e);
+}
+
+static void hello_ll_getattr(
+        fuse_req_t req,
+        fuse_ino_t ino,
+        struct fuse_file_info *fi)
+{
+    struct stat stbuf;
+    int e;
+
+    _LOG_DBG("getattr()  ino: %#lx fi->flags: %#x", ino, fi->flags);
+
+    (void) memset(&stbuf, 0, sizeof(stbuf));
+
+    if (hello_stat(ino, &stbuf) == 0) {
+        e = fuse_reply_attr(req, &stbuf, 1.0);
+        if (e != 0) _LOG_ERR("fuse_reply_attr() fail  errno: %d", -e);
+    } else {
+        e = fuse_reply_err(req, ENOENT);
+        if (e != 0) _LOG_ERR("fuse_reply_err() fail  errno: %d", -e);
+    }
+}
+
+struct dirbuf {
+    char *p;
+    size_t size;
+};
+
+static void dirbuf_add(
+        fuse_req_t req,
+        struct dirbuf *b,
+        const char *name,
+        fuse_ino_t ino)
+{
+    struct stat stbuf;
+    size_t oldsize;
+    char *newp;
+
+    assert_nonnull(req);
+    assert_nonnull(b);
+    assert_nonnull(name);
+
+    oldsize = b->size;
+
+    b->size += fuse_add_direntry(req, NULL, 0, name, NULL, 0);
+
+    newp = realloc(b->p, b->size);
+    assert_nonnull(newp);
+    b->p = newp;
+
+    (void) memset(&stbuf, 0, sizeof(stbuf));
+    stbuf.st_ino = ino;
+
+    (void) fuse_add_direntry(req, b->p + oldsize, b->size - oldsize,
+                                name, &stbuf, b->size);
+}
+
+#ifndef MIN
+#define MIN(a, b)   (((a) < (b)) ? (a) : (b))
+#endif
+
+static int reply_buf_limited(
+        fuse_req_t req,
+        const char *buf,
+        size_t bufsize,
+        off_t off,
+        size_t maxsize)
+{
+    assert(off >= 0);
+
+    if ((size_t) off < bufsize)
+        return fuse_reply_buf(req, buf + off, MIN(bufsize - off, maxsize));
+
+    return fuse_reply_buf(req, NULL, 0);
+}
+
+static void hello_ll_readdir(
+        fuse_req_t req,
+        fuse_ino_t ino,
+        size_t size,
+        off_t off,
+        struct fuse_file_info *fi)
+{
+    struct dirbuf b;
+    int e;
+
+    LOG_DBG("readdir()  ino: %#lx size: %zu off: %lld fi->flags: %#x",
+                        ino, size, off, fi->flags);
+
+    if (ino != 1) {     /* If not root directory */
+        fuse_reply_err(req, ENOENT);
+        return;
+    }
+
+    (void) memset(&b, 0, sizeof(b));
+
+    dirbuf_add(req, &b, ".", 1);                /* Root directory */
+    dirbuf_add(req, &b, "..", 1);               /* Parent of root is itself */
+    dirbuf_add(req, &b, file_path + 1, 2);      /* The only regular file */
+
+    e = reply_buf_limited(req, b.p, b.size, off, size);
+    if (e != 0) {
+        _LOG_ERR("reply_buf_limited() fail  errno: %d size: %zu off: %lld max: %zu",
+                    -e, b.size, off, size);
+    }
+
+    free(b.p);
+}
+
+static void hello_ll_open(
+        fuse_req_t req,
+        fuse_ino_t ino,
+        struct fuse_file_info *fi)
+{
+    int e;
+
+    _LOG_DBG("open()  ino: %#lx fi->flags: %#x", ino, fi->flags);
+
+    if (ino != 2) {
+        e = fuse_reply_err(req, EISDIR);
+    } else if ((fi->flags & O_ACCMODE) != O_RDONLY) {
+        e = fuse_reply_err(req, EACCES);
+    } else {
+        e = fuse_reply_open(req, fi);
+    }
+
+    assert(e == 0);
+}
+
+static void hello_ll_read(
+        fuse_req_t req,
+        fuse_ino_t ino,
+        size_t size,
+        off_t off,
+        struct fuse_file_info *fi)
+{
+    int e;
+    _LOG_DBG("read()  ino: %#lx size: %zu off: %lld fi->flags: %#x",
+                        ino, size, off, fi->flags);
+
+    assert(ino == 2);
+    e = reply_buf_limited(req, file_content, file_size, off, size);
+    if (e != 0) _LOG_ERR("reply_buf_limited() fail  errno: %d", -e);
+}
+
+static const struct fuse_lowlevel_ops hello_ll_ops = {
+    .lookup = hello_ll_lookup,
+    .getattr = hello_ll_getattr,
+    .readdir = hello_ll_readdir,
+    .open = hello_ll_open,
+    .read = hello_ll_read,
 };
 
 int main(int argc, char *argv[])
