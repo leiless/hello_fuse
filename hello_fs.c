@@ -126,7 +126,7 @@ static int hello_read(
 
     (void) memcpy(buf, file_content + off, sz);
 
-    return sz;
+    return (int) sz;
 }
 
 static int hello_readdir(

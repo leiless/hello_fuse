@@ -8,8 +8,10 @@
 *.xcworkspace/
 DerivedData/
 
-hello_fs-debug
 hello_fs
+hello_fs-debug
+hello_fs_ll
+hello_fs_ll-debug
 
 mnt/
 

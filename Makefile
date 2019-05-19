@@ -29,16 +29,25 @@ EXEC := hello_fs hello_fs-debug
 
 all: debug
 
-release: hello_fs
-debug: hello_fs-debug
+release: hello_fs hello_fs_ll
+debug: hello_fs-debug hello_fs_ll-debug
 
 hello_fs: CFLAGS += -Os
 hello_fs: hello_fs.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBS) $< -o $@
 
+hello_fs_ll: CFLAGS += -Os
+hello_fs_ll: hello_fs_ll.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBS) $< -o $@
+
 hello_fs-debug: CPPFLAGS += -g -DDEBUG
 hello_fs-debug: CFLAGS += -O0
 hello_fs-debug: hello_fs.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBS) $< -o $@
+
+hello_fs_ll-debug: CPPFLAGS += -g -DDEBUG
+hello_fs_ll-debug: CFLAGS += -O0
+hello_fs_ll-debug: hello_fs_ll.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LIBS) $< -o $@
 
 clean:
