@@ -100,7 +100,7 @@ static void hello_ll_lookup(
         return;
     }
 
-    (void) memset(&e, 0, sizeof(e));
+    (void) memset(&param, 0, sizeof(param));
     param.ino = 2;              /* see: hello_stat() */
     param.attr_timeout = 1.0;   /* in seconds */
     param.entry_timeout = 1.0;  /* in seconds */
@@ -323,6 +323,7 @@ int main(int argc, char *argv[])
     if (fuse_set_signal_handlers(se) != -1) {
         fuse_session_add_chan(se, ch);
 
+        _LOG("Type `umount %s' in shell to stop this fs", mountpoint);
         if (fuse_session_loop(se) == -1) {
             e = 5;
             _LOG_ERR("fuse_session_loop() fail");
