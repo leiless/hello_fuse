@@ -94,15 +94,16 @@ static void hello_ll_lookup(
 
     _LOG_DBG("lookup()  parent: %#lx name: %s", parent, name);
 
-    if (parent != 1 || strcmp(name, file_path) != 0) {
-        fuse_reply_err(req, ENOENT);
+    if (parent != 1 || strcmp(name, file_path + 1) != 0) {
+        e = fuse_reply_err(req, ENOENT);
+        if (e != 0) _LOG_ERR("fuse_reply_err() fail  errno: %d", -e);
         return;
     }
 
     (void) memset(&e, 0, sizeof(e));
     param.ino = 2;              /* see: hello_stat() */
-    param.attr_timeout = 1.0;
-    param.entry_timeout = 1.0;
+    param.attr_timeout = 1.0;   /* in seconds */
+    param.entry_timeout = 1.0;  /* in seconds */
     (void) hello_stat(param.ino, &param.attr);
 
     e = fuse_reply_entry(req, &param);
@@ -164,13 +165,17 @@ static void dirbuf_add(
     stbuf.st_ino = ino;
 
     (void) fuse_add_direntry(req, b->p + oldsize, b->size - oldsize,
-                                name, &stbuf, b->size);
+                                            name, &stbuf, b->size);
 }
 
 #ifndef MIN
 #define MIN(a, b)   (((a) < (b)) ? (a) : (b))
 #endif
 
+/**
+ * @return  0       on success
+ *          -errno  for failure to send reply
+ */
 static int reply_buf_limited(
         fuse_req_t req,
         const char *buf,
@@ -193,8 +198,8 @@ static void hello_ll_readdir(
         off_t off,
         struct fuse_file_info *fi)
 {
-    struct dirbuf b;
     int e;
+    struct dirbuf b;
 
     assert_nonnull(req);
     assert_nonnull(fi);
@@ -204,7 +209,8 @@ static void hello_ll_readdir(
                         ino, size, off, fi->flags);
 
     if (ino != 1) {     /* If not root directory */
-        fuse_reply_err(req, ENOTDIR);
+        e = fuse_reply_err(req, ENOTDIR);
+        if (e != 0) _LOG_ERR("fuse_reply_err() fail  errno: %d", -e);
         return;
     }
 
