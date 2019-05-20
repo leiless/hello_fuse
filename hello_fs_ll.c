@@ -119,9 +119,9 @@ static void hello_ll_getattr(
     struct stat stbuf;
 
     assert_nonnull(req);
-    assert_nonnull(fi);
+    UNUSED(fi);     /* fi is NULL */
 
-    _LOG_DBG("getattr()  ino: %#lx fi->flags: %#x", ino, fi->flags);
+    _LOG_DBG("getattr()  ino: %#lx", ino);
 
     (void) memset(&stbuf, 0, sizeof(stbuf));
 
@@ -326,6 +326,8 @@ int main(int argc, char *argv[])
         if (fuse_session_loop(se) == -1) {
             e = 5;
             _LOG_ERR("fuse_session_loop() fail");
+        } else {
+            _LOG("session loop end  cleaning up...");
         }
 
         fuse_remove_signal_handlers(se);
