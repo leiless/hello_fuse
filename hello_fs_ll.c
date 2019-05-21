@@ -96,7 +96,7 @@ static void hello_ll_lookup(
 
     if (parent != 1 || strcmp(name, file_path + 1) != 0) {
         e = fuse_reply_err(req, ENOENT);
-        if (e != 0) _LOG_ERR("fuse_reply_err() fail  errno: %d", -e);
+        assert(e == 0);
         return;
     }
 
@@ -107,7 +107,7 @@ static void hello_ll_lookup(
     (void) hello_stat(param.ino, &param.attr);
 
     e = fuse_reply_entry(req, &param);
-    if (e != 0) _LOG_ERR("fuse_reply_entry() fail  errno: %d", -e);
+    assert(e == 0);
 }
 
 static void hello_ll_getattr(
@@ -127,10 +127,10 @@ static void hello_ll_getattr(
 
     if (hello_stat(ino, &stbuf) == 0) {
         e = fuse_reply_attr(req, &stbuf, 1.0);
-        if (e != 0) _LOG_ERR("fuse_reply_attr() fail  errno: %d", -e);
+        assert(e == 0);
     } else {
         e = fuse_reply_err(req, ENOENT);
-        if (e != 0) _LOG_ERR("fuse_reply_err() fail  errno: %d", -e);
+        assert(e == 0);
     }
 }
 
@@ -210,7 +210,7 @@ static void hello_ll_readdir(
 
     if (ino != 1) {     /* If not root directory */
         e = fuse_reply_err(req, ENOTDIR);
-        if (e != 0) _LOG_ERR("fuse_reply_err() fail  errno: %d", -e);
+        assert(e == 0);
         return;
     }
 
@@ -221,10 +221,7 @@ static void hello_ll_readdir(
     dirbuf_add(req, &b, file_path + 1, 2);      /* The only regular file */
 
     e = reply_buf_limited(req, b.p, b.size, off, size);
-    if (e != 0) {
-        _LOG_ERR("reply_buf_limited() fail  errno: %d size: %zu off: %lld max: %zu",
-                    -e, b.size, off, size);
-    }
+    assert(e == 0);
 
     free(b.p);
 }
@@ -243,13 +240,14 @@ static void hello_ll_open(
 
     if (ino != 2) {
         e = fuse_reply_err(req, EISDIR);
+        assert(e == 0);
     } else if ((fi->flags & O_ACCMODE) != O_RDONLY) {
         e = fuse_reply_err(req, EACCES);
+        assert(e == 0);
     } else {
         e = fuse_reply_open(req, fi);
+        assert(e == 0);
     }
-
-    assert(e == 0);
 }
 
 static void hello_ll_read(
@@ -270,7 +268,7 @@ static void hello_ll_read(
 
     assert(ino == 2);
     e = reply_buf_limited(req, file_content, file_size, off, size);
-    if (e != 0) _LOG_ERR("reply_buf_limited() fail  errno: %d", -e);
+    assert(e == 0);
 }
 
 static const struct fuse_lowlevel_ops hello_ll_ops = {

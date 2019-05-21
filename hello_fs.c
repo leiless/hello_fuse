@@ -154,7 +154,6 @@ static int hello_readdir(
     return 0;
 }
 
-/* All FUSE functionalities NYI */
 static struct fuse_operations hello_fs_op = {
     .getattr = hello_getattr,
     .open = hello_open,
