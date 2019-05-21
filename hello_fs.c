@@ -1,7 +1,7 @@
 /*
  * Created 190514 lynnl
  *
- * Hello FUSE filesystem implementation
+ * Hello FUSE filesystem implementation using high-level FUSE API
  *
  * see:
  *  osxfuse/filesystems/filesystems-c/hello/hello.c
@@ -17,35 +17,7 @@
 #include <errno.h>
 #include <fuse.h>
 
-#include <syslog.h>
-
-/**
- * Should only used for `char[]'  NOT `char *'
- * Assume ends with null byte('\0')
- */
-#define STRLEN(s)           (sizeof(s) - 1)
-
-#define FSNAME              "hello_fs"
-
-#ifdef USE_TTY_LOGGING
-#define LOG(fmt, ...)       (void) printf("[" FSNAME "]: " fmt "\n", ##__VA_ARGS__)
-#define LOG_ERROR(fmt, ...) (void) fprintf(stderr, "[" FSNAME "]: (ERR) " fmt "\n", ##__VA_ARGS__)
-#define LOG_DBG(fmt, ...)   LOG("(DBG) " fmt, ##__VA_ARGS__)
-#define LOG_WARN(fmt, ...)  LOG("(WARN) " fmt, ##__VA_ARGS__)
-#else
-/**
- * Do NOT use LOG_EMERG level  it'll broadcast to all users
- * macOS 10.13+ LOG_INFO, LOG_DEBUG levels rejected(log nothing)
- */
-#define LOG(fmt, ...)       syslog(LOG_NOTICE, fmt "\n", ##__VA_ARGS__)
-#define LOG_ERROR(fmt, ...) syslog(LOG_ERR, "[ERR] " fmt "\n", ##__VA_ARGS__)
-#define LOG_DBG(fmt, ...)   syslog(LOG_NOTICE, "[DBG] " fmt "\n", ##__VA_ARGS__)
-#define LOG_WARN(fmt, ...)  syslog(LOG_WARNING, "[WARN] " fmt "\n", ##__VA_ARGS__)
-#endif
-
-#define UNUSED(arg, ...)    (void) ((void) (arg), ##__VA_ARGS__)
-
-#define assert_nonnull(p)   assert((p) != NULL)
+#include "utils.h"
 
 static const char *file_path = "/hello.txt";
 static const char file_content[] = "Hello world!\n";
@@ -56,7 +28,7 @@ static int hello_getattr(const char *path, struct stat *stbuf)
     assert_nonnull(path);
     assert_nonnull(stbuf);
 
-    LOG_DBG("getattr()  path: %s", path);
+    SYSLOG_DBG("getattr()  path: %s", path);
 
     if (strcmp(path, "/") == 0) {
         (void) memset(stbuf, 0, sizeof(*stbuf));
@@ -84,7 +56,7 @@ static int hello_open(const char *path, struct fuse_file_info *fi)
     assert_nonnull(path);
     assert_nonnull(fi);
 
-    LOG_DBG("open()  path: %s fi->flags: %#x", path, fi->flags);
+    SYSLOG_DBG("open()  path: %s fi->flags: %#x", path, fi->flags);
 
     if (strcmp(path, file_path) != 0) {
         return -ENOENT;     /* We have only one regular file */
@@ -109,7 +81,7 @@ static int hello_read(
     assert(off >= 0);
     assert_nonnull(fi);
 
-    LOG_DBG("read()  path: %s size: %zu off: %lld fi->flags: %#x", path, sz, off, fi->flags);
+    SYSLOG_DBG("read()  path: %s size: %zu off: %lld fi->flags: %#x", path, sz, off, fi->flags);
 
     if (strcmp(path, file_path) != 0) {
         return -ENOENT;
@@ -117,7 +89,7 @@ static int hello_read(
 
     /* Trying to read past EOF of file_path */
     if ((size_t) off >= file_size) {
-        LOG_WARN("Read past EOF?!  off: %lld size: %zu", off, sz);
+        SYSLOG_WARN("Read past EOF?!  off: %lld size: %zu", off, sz);
         return 0;
     }
 
@@ -142,7 +114,7 @@ static int hello_readdir(
     assert(off >= 0);
     assert_nonnull(fi);
 
-    LOG_DBG("readdir()  path: %s off: %lld fi->flags: %#x", path, off, fi->flags);
+    SYSLOG_DBG("readdir()  path: %s off: %lld fi->flags: %#x", path, off, fi->flags);
 
     /* hello-fs have only one directory(e.g. the root directory) */
     if (strcmp(path, "/") != 0) return -ENOENT;
@@ -154,7 +126,7 @@ static int hello_readdir(
     return 0;
 }
 
-static struct fuse_operations hello_fs_op = {
+static struct fuse_operations hello_fs_ops = {
     .getattr = hello_getattr,
     .open = hello_open,
     .read = hello_read,
@@ -166,6 +138,6 @@ int main(int argc, char *argv[])
     /* Setup syslog(3) */
     (void) setlogmask(LOG_UPTO(LOG_NOTICE));
 
-    return fuse_main(argc, argv, &hello_fs_op, NULL);
+    return fuse_main(argc, argv, &hello_fs_ops, NULL);
 }
 
