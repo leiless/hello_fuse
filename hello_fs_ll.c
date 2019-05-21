@@ -18,40 +18,7 @@
 #include <stdlib.h>
 #include <fuse_lowlevel.h>
 
-#include <syslog.h>
-
-/**
- * Should only used for `char[]'  NOT `char *'
- * Assume ends with null byte('\0')
- */
-#define STRLEN(s)           (sizeof(s) - 1)
-
-#define FSNAME              "hello_fs_ll"
-
-#define _LOG(fmt, ...)          (void) printf(FSNAME ": " fmt "\n", ##__VA_ARGS__)
-#define _LOG_ERR(fmt, ...)      (void) fprintf(stderr, FSNAME ": [ERR] " fmt "\n", ##__VA_ARGS__)
-#define _LOG_DBG(fmt, ...)      LOG("[DBG] " fmt, ##__VA_ARGS__)
-#define _LOG_WARN(fmt, ...)     LOG("[WARN] " fmt, ##__VA_ARGS__)
-
-#ifdef USE_TTY_LOGGING
-#define LOG(fmt, ...)       (void) printf("[" FSNAME "]: " fmt "\n", ##__VA_ARGS__)
-#define LOG_ERROR(fmt, ...) (void) fprintf(stderr, "[" FSNAME "]: (ERR) " fmt "\n", ##__VA_ARGS__)
-#define LOG_DBG(fmt, ...)   LOG("(DBG) " fmt, ##__VA_ARGS__)
-#define LOG_WARN(fmt, ...)  LOG("(WARN) " fmt, ##__VA_ARGS__)
-#else
-/**
- * Do NOT use LOG_EMERG level  it'll broadcast to all users
- * macOS 10.13+ LOG_INFO, LOG_DEBUG levels rejected(log nothing)
- */
-#define LOG(fmt, ...)       syslog(LOG_NOTICE, fmt "\n", ##__VA_ARGS__)
-#define LOG_ERROR(fmt, ...) syslog(LOG_ERR, "[ERR] " fmt "\n", ##__VA_ARGS__)
-#define LOG_DBG(fmt, ...)   syslog(LOG_NOTICE, "[DBG] " fmt "\n", ##__VA_ARGS__)
-#define LOG_WARN(fmt, ...)  syslog(LOG_WARNING, "[WARN] " fmt "\n", ##__VA_ARGS__)
-#endif
-
-#define UNUSED(arg, ...)    (void) ((void) (arg), ##__VA_ARGS__)
-
-#define assert_nonnull(p)   assert((p) != NULL)
+#include "utils.h"
 
 static const char *file_path = "/hello.txt";
 static const char file_content[] = "Hello world!\n";
@@ -92,7 +59,7 @@ static void hello_ll_lookup(
     assert_nonnull(req);
     assert_nonnull(name);
 
-    _LOG_DBG("lookup()  parent: %#lx name: %s", parent, name);
+    SYSLOG_DBG("lookup()  parent: %#lx name: %s", parent, name);
 
     if (parent != 1 || strcmp(name, file_path + 1) != 0) {
         e = fuse_reply_err(req, ENOENT);
@@ -121,7 +88,7 @@ static void hello_ll_getattr(
     assert_nonnull(req);
     UNUSED(fi);     /* fi is NULL */
 
-    _LOG_DBG("getattr()  ino: %#lx", ino);
+    SYSLOG_DBG("getattr()  ino: %#lx", ino);
 
     (void) memset(&stbuf, 0, sizeof(stbuf));
 
@@ -205,7 +172,7 @@ static void hello_ll_readdir(
     assert_nonnull(fi);
     assert(off >= 0);
 
-    _LOG_DBG("readdir()  ino: %#lx size: %zu off: %lld fi->flags: %#x",
+    SYSLOG_DBG("readdir()  ino: %#lx size: %zu off: %lld fi->flags: %#x",
                         ino, size, off, fi->flags);
 
     if (ino != 1) {     /* If not root directory */
@@ -236,7 +203,7 @@ static void hello_ll_open(
     assert_nonnull(req);
     assert_nonnull(fi);
 
-    _LOG_DBG("open()  ino: %#lx fi->flags: %#x", ino, fi->flags);
+    SYSLOG_DBG("open()  ino: %#lx fi->flags: %#x", ino, fi->flags);
 
     if (ino != 2) {
         e = fuse_reply_err(req, EISDIR);
@@ -263,7 +230,7 @@ static void hello_ll_read(
     assert_nonnull(fi);
     assert(off >= 0);
 
-    _LOG_DBG("read()  ino: %#lx size: %zu off: %lld fi->flags: %#x",
+    SYSLOG_DBG("read()  ino: %#lx size: %zu off: %lld fi->flags: %#x",
                         ino, size, off, fi->flags);
 
     assert(ino == 2);
@@ -292,28 +259,28 @@ int main(int argc, char *argv[])
 
     e = fuse_parse_cmdline(&args, &mountpoint, NULL, NULL);
     if (e == -1) {
-        _LOG_ERR("fuse_parse_cmdline() fail");
+        LOG_ERROR("fuse_parse_cmdline() fail");
         e = 1;
         goto out_fail;
     } else if (mountpoint == NULL) {
-        if (argc == 1) _LOG_ERR("no mountpoint  -h for help");
+        if (argc == 1) LOG_ERROR("no mountpoint  -h for help");
         e = 2;
         goto out_args;
     }
 
     assert_nonnull(mountpoint);
-    _LOG("mountpoint: %s", mountpoint);
+    LOG("mountpoint: %s", mountpoint);
 
     ch = fuse_mount(mountpoint, &args);
     if (ch == NULL) {
-        _LOG_ERR("fuse_mount() fail");
+        LOG_ERROR("fuse_mount() fail");
         e = 3;
         goto out_chan;
     }
 
     se = fuse_lowlevel_new(&args, &hello_ll_ops, sizeof(hello_ll_ops), NULL /* user data */);
     if (se == NULL) {
-        _LOG_ERR("fuse_lowlevel_new() fail");
+        LOG_ERROR("fuse_lowlevel_new() fail");
         e = 4;
         goto out_se;
     }
@@ -321,19 +288,19 @@ int main(int argc, char *argv[])
     if (fuse_set_signal_handlers(se) != -1) {
         fuse_session_add_chan(se, ch);
 
-        _LOG("Type `umount %s' in shell to stop this fs", mountpoint);
+        LOG("Type `umount %s' in shell to stop this fs", mountpoint);
         if (fuse_session_loop(se) == -1) {
             e = 5;
-            _LOG_ERR("fuse_session_loop() fail");
+            LOG_ERROR("fuse_session_loop() fail");
         } else {
-            _LOG("session loop end  cleaning up...");
+            LOG("session loop end  cleaning up...");
         }
 
         fuse_remove_signal_handlers(se);
         fuse_session_remove_chan(ch);
     } else {
         e = 6;
-        _LOG_ERR("fuse_set_signal_handlers() fail");
+        LOG_ERROR("fuse_set_signal_handlers() fail");
     }
 
     fuse_session_destroy(se);
