@@ -39,8 +39,6 @@ umount mount_point
 
 ### TODO
 
-* Implement `hello_fuse` use [`<fuse_lowlevel.h>`](https://github.com/osxfuse/fuse/blob/master/include/fuse_lowlevel.h) APIs
-
 * Use new [`os_log(3)`](x-man-page://3/os_log) API for macOS >= 10.12
 
 * Add more files(of different types, contents, attributes) to explore *FUSE for macOS*
@@ -48,3 +46,7 @@ umount mount_point
 ### *References*
 
 [osxfuse/filesystems/filesystems-c/hello](https://github.com/osxfuse/filesystems/tree/master/filesystems-c/hello)
+
+[libfuse/example/hello.c](https://github.com/libfuse/libfuse/blob/master/example/hello.c)
+
+[libfuse/example/hello_ll.c](https://github.com/libfuse/libfuse/blob/master/example/hello_ll.c)

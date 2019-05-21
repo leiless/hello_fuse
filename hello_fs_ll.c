@@ -86,7 +86,7 @@ static void hello_ll_getattr(
     struct stat stbuf;
 
     assert_nonnull(req);
-    UNUSED(fi);     /* fi is NULL */
+    assert(fi == NULL);
 
     SYSLOG_DBG("getattr()  ino: %#lx", ino);
 
